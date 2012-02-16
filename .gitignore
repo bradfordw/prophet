@@ -1,2 +1,3 @@
 sqlnet.log
 *.beam
+columns.c
