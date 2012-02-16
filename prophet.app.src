@@ -1,0 +1,13 @@
+{application, prophet,
+ [
+  {description, ""},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {env, [
+         %% Env stuffs goes here.
+        ]}
+ ]}.
