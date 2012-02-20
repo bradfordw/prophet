@@ -1,4 +1,4 @@
-Very experimental, early-stage ocilib-based bindings for Erlang. Currently all values are returned as binaries (did I say it was experimental while I work on inferring types?).
+Very experimental, early-stage ocilib-based bindings for Erlang. Currently all fields (EXCEPT NUMBER) are returned as binaries.
 
 API is pretty straight-forward (for now):
 
