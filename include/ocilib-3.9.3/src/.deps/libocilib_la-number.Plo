@@ -23,8 +23,7 @@ libocilib_la-number.lo libocilib_la-number.o: number.c ocilib_internal.h \
   /usr/lib/gcc/i686-apple-darwin10/4.2.1/include/syslimits.h \
   /usr/include/limits.h /usr/include/machine/limits.h \
   /usr/include/i386/limits.h /usr/include/i386/_limits.h \
-  /usr/include/sys/syslimits.h /usr/include/wctype.h \
-  /usr/include/_wctype.h /usr/include/wchar.h oci_import.h \
+  /usr/include/sys/syslimits.h oci_import.h \
   /usr/local/oracle/instantclient_10_2/sdk/include/oci.h \
   /usr/local/oracle/instantclient_10_2/sdk/include/oratypes.h \
   /usr/lib/gcc/i686-apple-darwin10/4.2.1/include/stddef.h \
@@ -145,12 +144,6 @@ ocilib_defs.h:
 /usr/include/i386/_limits.h:
 
 /usr/include/sys/syslimits.h:
-
-/usr/include/wctype.h:
-
-/usr/include/_wctype.h:
-
-/usr/include/wchar.h:
 
 oci_import.h:
 

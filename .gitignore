@@ -1,3 +1,5 @@
 sqlnet.log
 *.beam
 columns.c
+build
+build-cols

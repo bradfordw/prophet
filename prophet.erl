@@ -1,5 +1,5 @@
 -module(prophet).
--export([init/0,open/3,select/2,perform/2,close/1]).
+-export([init/0,open/3,select/2,execute/2,close/1]).
 
 -export([decode_oci_string/1]).
 
@@ -19,8 +19,8 @@ open(DB, User, Pass) ->
 select(Connection, Query) ->
   erlang:nif_error({error, not_loaded}).
 
--spec perform(oci_handle(), string()) -> {ok, {affected, integer()}} | {error, any()}.
-perform(Connection, Query) ->
+-spec execute(oci_handle(), string()) -> {ok, {affected, integer()}} | {error, any()}.
+execute(Connection, Query) ->
   erlang:nif_error({error, not_loaded}).
 
 -spec close(oci_handle()) -> ok | {error, any()}.

@@ -51,59 +51,79 @@ static ERL_NIF_TERM prophet_close(ErlNifEnv* env, int argc, const ERL_NIF_TERM a
 
 static ERL_NIF_TERM prophet_select(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
   prophet_oci* prophet_oci_handle;
+	const wchar_t *oci_value;
+	char query[BUFF_LEN];
+	int i, cols, row_count, value_len = 0;
+	int col_prec, col_scale = 0;
   ERL_NIF_TERM results;
 	ERL_NIF_TERM columns;
   ERL_NIF_TERM rows;
 	ERL_NIF_TERM row;
 	ErlNifBinary value;
-	const wchar_t *row_value;
-	const wchar_t *col_value;
-	char query[BUFF_LEN];
-	int value_len;
-	
+  OCI_Statement *st;
+  OCI_Resultset *rs;
+
   if (!enif_get_resource(env, argv[0], prophet_rsrc, (void**)&prophet_oci_handle)) {
     return enif_make_badarg(env);
   }
-  
-  OCI_Statement *st;
-  OCI_Resultset *rs;
 
   enif_get_string(env, argv[1], query, BUFF_LEN, ERL_NIF_LATIN1);
   st = OCI_StatementCreate(prophet_oci_handle->cn);
 
   OCI_ExecuteStmt(st, query);
   rs = OCI_GetResultset(st);
-	int i, cols, row_count;
+
   results = enif_make_list(env, 0);
 	cols = OCI_GetColumnCount(rs);
 	columns = enif_make_list(env, 0);
+
 	for (i = 1; i <= cols; i++) {
 		OCI_Column *col = OCI_GetColumn(rs, i);
-		col_value = (wchar_t *) OCI_GetColumnName(col);
-		value_len = wcslen(col_value) * sizeof(wchar_t);
+		oci_value = (wchar_t *) OCI_GetColumnName(col);
+		value_len = wcslen(oci_value) * sizeof(wchar_t);
 		enif_alloc_binary(value_len, &value);
-		memcpy(value.data, col_value, value_len);
+		memcpy(value.data, oci_value, value_len);
 
-		columns = enif_make_list_cell(env, 
-			enif_make_tuple2(env, 
-				enif_make_binary(env, &value), 
-				enif_make_int(env, OCI_ColumnGetType(col))), columns);
+		columns = enif_make_list_cell(env, enif_make_binary(env, &value), columns);
 	}
 
 	results = enif_make_list_cell(env, 
 		enif_make_tuple2(env, enif_make_atom(env, "columns"), columns), results);
 	rows = enif_make_list(env, 0);
-	row_count = 0;
+
 	while (OCI_FetchNext(rs)) {
 		row = enif_make_list(env, 0);
 		for (i = 1; i <= cols; i++) {
 			OCI_Column *col = OCI_GetColumn(rs, i);
-			row_value = (wchar_t *) OCI_GetString(rs, i);
-			value_len = wcslen(row_value) * sizeof(wchar_t);
-			enif_alloc_binary(value_len, &value);
-			memcpy(value.data, row_value, value_len);
-
-			row = enif_make_list_cell(env, enif_make_binary(env, &value), row);
+			// infer type
+			switch (OCI_ColumnGetType(col)) {
+				case OCI_CDT_NUMERIC:
+				col_scale = OCI_ColumnGetScale(col);
+				col_prec = OCI_ColumnGetPrecision(col);
+					if (col_prec == 0 && col_scale == 0) {
+						row = enif_make_list_cell(env, enif_make_double(env, OCI_GetDouble(rs, i)), row);
+					} else if (col_prec > 0 && col_scale > 0) {
+						row = enif_make_list_cell(env, enif_make_double(env, OCI_GetDouble(rs, i)), row);
+					} else if (col_prec > 0 && col_scale == 0) {
+						row = enif_make_list_cell(env, enif_make_int(env, OCI_GetInt(rs, i)), row);
+					} else if (col_prec >= 0 && col_scale < 0) {
+						row = enif_make_list_cell(env, enif_make_double(env, OCI_GetDouble(rs, i)), row);
+					} else {
+						oci_value = (wchar_t *) OCI_GetString(rs, i);
+						value_len = wcslen(oci_value) * sizeof(wchar_t);
+						enif_alloc_binary(value_len, &value);
+						memcpy(value.data, oci_value, value_len);
+						row = enif_make_list_cell(env, enif_make_binary(env, &value), row);
+					}
+					break;
+				default:
+					oci_value = (wchar_t *) OCI_GetString(rs, i);
+					value_len = wcslen(oci_value) * sizeof(wchar_t);
+					enif_alloc_binary(value_len, &value);
+					memcpy(value.data, oci_value, value_len);
+					row = enif_make_list_cell(env, enif_make_binary(env, &value), row);
+					break;
+			}
 		}
 		rows = enif_make_list_cell(env, row, rows);
 		row_count++;
@@ -114,7 +134,7 @@ static ERL_NIF_TERM prophet_select(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
 			enif_make_atom(env, "data"), rows), results);
 	results = enif_make_list_cell(env, 
 		enif_make_tuple2(env, 
-			enif_make_atom(env, "num_rows"), 
+			enif_make_atom(env, "rows"), 
 			enif_make_int(env, row_count)), results);
 
 	OCI_FreeStatement(st);
@@ -155,7 +175,7 @@ static ErlNifFunc nif_funcs[] = {
     {"open", 3, prophet_open},
     {"close", 1, prophet_close},
     {"select", 2, prophet_select},
-    {"perform", 2, prophet_perform}
+    {"execute", 2, prophet_execute}
 };
 
 ERL_NIF_INIT(prophet, nif_funcs, &load_init, NULL, NULL, NULL)
