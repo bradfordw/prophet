@@ -3,3 +3,4 @@ sqlnet.log
 columns.c
 build
 build-cols
+prophet.so
