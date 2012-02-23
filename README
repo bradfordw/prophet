@@ -1,4 +1,4 @@
-Very experimental, early-stage ocilib-based bindings for Erlang. Currently all fields (EXCEPT NUMBER) are returned as binaries.
+Very experimental, early-stage ocilib-based bindings for Erlang.
 
 API is pretty straight-forward (for now):
 
@@ -10,9 +10,10 @@ prophet:init().
 {ok, {affected, AffectedRowCount}} = prophet:execute(Oci, "update schema.users set clue = 1 where clue = 0").
 
 Planned functionality (in order):
-	Type inference from column meta data (defaulting to a binary if none can be determined)
-	Bind variable support
 	Simple instance "ping"
 	Notification support
 	Hash table support
 	Queue support
+
+Currently supports:
+	Bind variables (on execution statements, select's soon to follow)
