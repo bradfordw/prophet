@@ -1,5 +1,5 @@
 -module(prophet).
--export([init/0,open/3,perform/3,perform/2,close/1]).
+-export([init/0,open/3,perform/3,perform/2,close/1,ping/1]).
 
 -export([decode_oci_string/1]).
 
@@ -26,6 +26,9 @@ perform(_Connection, _Query, _BindVars) ->
 close(_DB) ->
   erlang:nif_error({error, not_loaded}).
 
+-spec ping(oci_handle()) -> pong | pang.
+ping(_DB) ->
+  erlang:nif_error({error, not_loaded}).
 %% Internal
 
 -spec decode_oci_string(binary()) -> binary() | {error, any()}.

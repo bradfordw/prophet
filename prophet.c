@@ -205,6 +205,20 @@ static ERL_NIF_TERM prophet_perform(ErlNifEnv* env, int argc, const ERL_NIF_TERM
   return enif_make_tuple2(env, enif_make_atom(env, "ok"), result);
 }
 
+static ERL_NIF_TERM prophet_ping(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+  prophet_oci* prophet_oci_handle;
+	ERL_NIF_TERM result;
+  if (!enif_get_resource(env, argv[0], prophet_rsrc, (void**)&prophet_oci_handle)) {
+    return enif_make_badarg(env);
+  }
+	if (OCI_Ping(prophet_oci_handle->cn)) {
+		result = enif_make_atom(env, "pong");
+	} else {
+		result = enif_make_atom(env, "pang");
+	}
+	return result;
+}
+
 static void unload(ErlNifEnv* env, void* arg) {}
 
 static int load_init(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info) {
@@ -219,7 +233,8 @@ static int load_init(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info) {
 static ErlNifFunc nif_funcs[] = {
     {"open", 3, prophet_open},
     {"close", 1, prophet_close},
-    {"perform", 3, prophet_perform}
+    {"perform", 3, prophet_perform},
+		{"ping", 1, prophet_ping}
 };
 
 ERL_NIF_INIT(prophet, nif_funcs, &load_init, NULL, NULL, NULL)
