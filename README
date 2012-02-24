@@ -5,15 +5,20 @@ API is pretty straight-forward (for now):
 prophet:init().
 {ok, Oci} = prophet:open("DBNAME", "USER", "PASS").
 
-{ok, [{num_rows, N}, {data, Rows}, {columns, Cols}]} = prophet:select(Oci, "select * from schema.users where clue > 0").
+{ok, [{num_rows, N}, {data, Rows}, {columns, Cols}]} = prophet:perform(Oci, "select * from schema.users where clue > 0").
+{ok, {affected, AffectedRowCount}} = prophet:perform(Oci, "update schema.users set clue = 1 where clue = 0").
 
-{ok, {affected, AffectedRowCount}} = prophet:execute(Oci, "update schema.users set clue = 1 where clue = 0").
+With Bind Variables:
+{ok, [{num_rows, N}, {data, Rows}, {columns, Cols}]} = prophet:perform(Oci, "select * from schema.users where clue > :clue", [{":clue",0, integer}]).
+{ok, {affected, AffectedRowCount}} = prophet:perform(Oci, "update schema.users set clue = 1 where clue = :clue", [{":clue",0, integer}]).
+
+pong = prophet:ping(Oci).
 
 Planned functionality (in order):
-	Simple instance "ping"
 	Notification support
 	Hash table support
 	Queue support
 
 Currently supports:
-	Bind variables (on execution statements, select's soon to follow)
+	Bind variables (on execution statements, select's soon to follow).
+	Ping (keeps the "pang" alive) - returns pong if instance is up, pang if not.
