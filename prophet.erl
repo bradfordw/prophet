@@ -23,11 +23,11 @@ perform(_Connection, _Query, _BindVars) ->
   erlang:nif_error({error, not_loaded}).
 
 -spec close(oci_handle()) -> ok | {error, any()}.
-close(_DB) ->
+close(_Connection) ->
   erlang:nif_error({error, not_loaded}).
 
 -spec ping(oci_handle()) -> pong | pang.
-ping(_DB) ->
+ping(_Connection) ->
   erlang:nif_error({error, not_loaded}).
 %% Internal
 
