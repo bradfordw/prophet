@@ -1,5 +1,5 @@
 -module(prophet).
--export([init/0,open/3,perform/3,perform/2,close/1,ping/1]).
+-export([init/0,open/3,perform/3,perform/2,close/1,ping/1,test/1]).
 
 -export([decode_oci_string/1]).
 
@@ -29,6 +29,10 @@ close(_Connection) ->
 -spec ping(oci_handle()) -> pong | pang.
 ping(_Connection) ->
   erlang:nif_error({error, not_loaded}).
+
+test(_Input) ->
+  erlang:nif_error({error, not_loaded}).
+
 %% Internal
 
 -spec decode_oci_string(binary()) -> binary() | {error, any()}.

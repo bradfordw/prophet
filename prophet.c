@@ -1,25 +1,13 @@
-#include <ocilib.h>
-#include "erl_nif.h"
-
-#define BUFF_LEN 4096
-
-struct prophet_oci {
-  OCI_Connection *cn;
-};
-
-typedef struct prophet_oci prophet_oci;
-static ErlNifResourceType* prophet_rsrc;
-// configuration atoms (used when casting)
-static ERL_NIF_TERM ATOM_STRING;
-static ERL_NIF_TERM ATOM_DOUBLE;
-static ERL_NIF_TERM ATOM_INTEGER;
-static ERL_NIF_TERM ATOM_UINTEGER;
+#include "prophet.h"
+static dtext dt_value[SIZE_STR];
+static mtext dt_bind[SIZE_STR];
 
 void bind_statement(ErlNifEnv *env, ERL_NIF_TERM bindings, OCI_Statement *st) {
 	ERL_NIF_TERM head, tail, list = bindings;
 	const ERL_NIF_TERM* tuple;
 	char bind_type[BUFF_LEN];
 	char bind_label[BUFF_LEN], string_value[BUFF_LEN];
+
   double double_value;
 	unsigned int uint_value;
 	int int_value;
@@ -34,31 +22,39 @@ void bind_statement(ErlNifEnv *env, ERL_NIF_TERM bindings, OCI_Statement *st) {
 		}
 		if (!enif_get_string(env, tuple[0], bind_label, sizeof(bind_label), ERL_NIF_LATIN1)) {
 			break;
+		} else {
+			sprint_dt(dt_bind, sizeof(bind_label), DT(bind_label));
 		}
+		if (enif_get_string(env, tuple[1], string_value, sizeof(string_value), ERL_NIF_LATIN1)) {
+			sprint_dt(dt_value, sizeof(string_value), DT(string_value));
+			OCI_BindString(st, dt_bind, dt_value, sizeof(dt_value));
+		}
+
 		switch (enif_make_atom(env, bind_type)) {
 			ATOM_STRING:
 				if (enif_get_string(env, tuple[1], string_value, sizeof(string_value), ERL_NIF_LATIN1)) {
-					OCI_BindString(st, MT(bind_label), (char *) string_value, sizeof(string_value));
+					OCI_BindString(st, dt_bind, string_value, sizeof(string_value));
 				}
 			break;
 			ATOM_DOUBLE:
 				if (enif_get_double(env, tuple[1], &double_value)) {
-					OCI_BindDouble(st, MT(bind_label), &double_value);
+					OCI_BindDouble(st, dt_bind, &double_value);
 				}
 			break;
 			ATOM_INTEGER:
 				if (enif_get_int(env, tuple[1], &int_value)) {
-					OCI_BindInt(st, MT(bind_label), &int_value);
+					OCI_BindInt(st, dt_bind, &int_value);
 				}
 			break;
 			ATOM_UINTEGER:
 				if (enif_get_uint(env, tuple[1], &uint_value)) {
-					OCI_BindUnsignedInt(st, MT(bind_label), &uint_value);
+					OCI_BindUnsignedInt(st, dt_bind, &uint_value);
 				}
 			break;
 			default: // string
 				if (enif_get_string(env, tuple[1], string_value, sizeof(string_value), ERL_NIF_LATIN1)) {
-					OCI_BindString(st, MT(bind_label), (char *) string_value, sizeof(string_value));
+					sprint_dt(dt_value, sizeof(string_value), DT(string_value));
+					OCI_BindString(st, dt_bind, dt_value, sizeof(dt_value));
 				}
 			break;
 		}
@@ -122,11 +118,13 @@ static ERL_NIF_TERM prophet_perform(ErlNifEnv* env, int argc, const ERL_NIF_TERM
 	}
 
 	st = OCI_StatementCreate(prophet_oci_handle->cn);
+	OCI_Prepare(st, DT(query));
+
 	if (!enif_is_empty_list(env, argv[2])) {
 		bind_statement(env, argv[2], st);
 	}
 
-	OCI_ExecuteStmt(st, query);
+	OCI_Execute(st);
 	// what kind of statement are we dealing with here
 	switch (OCI_GetStatementType(st)) {
 		case OCI_CST_SELECT:
@@ -153,7 +151,7 @@ static ERL_NIF_TERM prophet_perform(ErlNifEnv* env, int argc, const ERL_NIF_TERM
 				row = enif_make_list(env, 0);
 				for (i = 1; i <= cols; i++) {
 					OCI_Column *col = OCI_GetColumn(rs, i);
-					// infer type [needs to be moved to separate function]
+					// infer type [needs some attention]
 					switch (OCI_ColumnGetType(col)) {
 						case OCI_CDT_NUMERIC:
 						col_scale = OCI_ColumnGetScale(col);
@@ -219,6 +217,42 @@ static ERL_NIF_TERM prophet_ping(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
 	return result;
 }
 
+static ERL_NIF_TERM prophet_test(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+	ERL_NIF_TERM head, tail, list = argv[0];
+	ERL_NIF_TERM result;
+	int tup_arity = 3;
+	const ERL_NIF_TERM* tuple;
+	char bind_type[BUFF_LEN];
+	char bind_label[BUFF_LEN], string_value[BUFF_LEN];
+
+	if (enif_is_empty_list(env, argv[0])) {
+		return enif_make_atom(env, "argument_is_empty_list");
+	}
+
+	result = enif_make_list(env, 0);
+
+	while(enif_get_list_cell(env, list, &head, &tail)) {
+		if (!enif_get_tuple(env, head, &tup_arity, &tuple)) {
+			return enif_make_atom(env, "could_not_get_tuple");
+		}
+		if (!enif_get_atom(env, tuple[2], bind_type, sizeof(bind_type), ERL_NIF_LATIN1)) {
+			return enif_make_atom(env, "could_not_get_bind_type");
+		}
+		if (!enif_get_string(env, tuple[0], bind_label, sizeof(bind_label), ERL_NIF_LATIN1)) {
+			return enif_make_atom(env, "could_not_get_bind_label");
+		}
+		if (!enif_get_string(env, tuple[1], string_value, sizeof(string_value), ERL_NIF_LATIN1)) {
+			return enif_make_atom(env, "could_not_get_string_value");
+		}
+
+		result = enif_make_list_cell(env, 
+			enif_make_tuple3(env, enif_make_string(env, bind_label, ERL_NIF_LATIN1), 
+				enif_make_string(env, string_value, ERL_NIF_LATIN1),
+				enif_make_atom(env, bind_type)), result);
+	}
+	return result;
+}
+
 static void unload(ErlNifEnv* env, void* arg) {}
 
 static int load_init(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info) {
@@ -234,7 +268,8 @@ static ErlNifFunc nif_funcs[] = {
     {"open", 3, prophet_open},
     {"close", 1, prophet_close},
     {"perform", 3, prophet_perform},
-		{"ping", 1, prophet_ping}
+		{"ping", 1, prophet_ping},
+		{"test", 1, prophet_test}
 };
 
 ERL_NIF_INIT(prophet, nif_funcs, &load_init, NULL, NULL, NULL)
