@@ -81,7 +81,7 @@ static ERL_NIF_TERM prophet_open(ErlNifEnv *env, int argc, const ERL_NIF_TERM ar
   
   ERL_NIF_TERM result = enif_make_resource(env, prophet_oci_handle);
   enif_release_resource(prophet_oci_handle);
-  
+	OCI_Cleanup();
   return enif_make_tuple2(env, enif_make_atom(env, "ok"), result);
 }
 
@@ -125,7 +125,7 @@ static ERL_NIF_TERM prophet_perform(ErlNifEnv* env, int argc, const ERL_NIF_TERM
 	}
 
 	OCI_Execute(st);
-	// what kind of statement are we dealing with here
+
 	switch (OCI_GetStatementType(st)) {
 		case OCI_CST_SELECT:
 		  rs = OCI_GetResultset(st);
@@ -198,7 +198,8 @@ static ERL_NIF_TERM prophet_perform(ErlNifEnv* env, int argc, const ERL_NIF_TERM
 			result = enif_make_tuple2(env, enif_make_atom(env, "affected"), enif_make_int(env, OCI_GetAffectedRows(st)));
 		break;
 	}
-	//cleanup and return
+
+	OCI_Cleanup();
 	OCI_FreeStatement(st);
   return enif_make_tuple2(env, enif_make_atom(env, "ok"), result);
 }
